@@ -18,8 +18,14 @@ void crc32_table_gen() {
 File::File(char path_ch[]) {
 
 	get_file_path(path_ch);
-	get_file_inf();
+	get_file_hash();
 
+};
+
+File::File(string& str) {
+
+	read_data(str);
+	get_file_hash();
 };
 
 File::~File() {};
@@ -28,18 +34,6 @@ void File::get_file_path(char path_ch[]) {
 	
 	utf8_to_rus(path_ch);
 	path = char_to_string(path_ch);	
-
-}
-
-bool file_eof(ifstream& paths) {
-
-	if (paths.eof()) {
-
-		return true;
-
-	}
-
-	return false;
 
 }
 
@@ -86,13 +80,22 @@ void del_space(char path[], int i) {
 
 }
 
-void File::write_data(ofstream& file) {
-	//ofstream file("Data.txt");
+void File::write_data(ofstream& file) {	
 
-	file << path << "|" << hash << "|";
+	file << path << "|" << hash << "|" << "\n";
+	
+}
 
-	change ? file << 'Y' << '\n' : file << 'N' << '\n';
-
+void File::read_data(string& str) {	
+	
+	int ptr;
+	
+	ptr = str.find('|');
+	path = str.substr(0, ptr);
+	str.erase(0, ptr + 1);
+	ptr = str.find('|');
+	hash = atoll(str.substr(0, ptr).c_str());
+	
 }
 
 int File::get_file_size(ifstream& file) {
@@ -105,7 +108,7 @@ int File::get_file_size(ifstream& file) {
 	file.seekg(0);
 }
 
-void File::get_file_inf() {
+void File::get_file_hash() {
 
 	ifstream file(path, ios::binary);
 
@@ -121,6 +124,8 @@ void File::get_file_inf() {
 	}
 	else
 		cerr << "File didn't open" << endl;
+
+	file.close();
 
 }
 
@@ -146,14 +151,24 @@ void File::hash_f(unsigned char* buf, unsigned long len) {
 	
 }
 
-void print() {
+void print(vector<File*>& files) {
 
-	/*
-	for (int i = 0; i < files_paths.size(); i++) {
+	int ptr_begin;
+	int ptr_end;
 
-		cout << "Path: " << files_paths[i] << endl;
-		cout << "Hash: " << files_hash[i] << endl;
-		cout << endl;
+	for (File* f : files) {
+
+		ptr_begin = f->path.find("\\");
+		ptr_end = f->path.rfind("\\");
+
+		cout << f->path.substr(0, ptr_begin + 1) << "....." << f->path.substr(ptr_end, f->path.size())
+			<< " | " << f->hash << " | ";
+
+		if (f->change)
+			cout << "Was changed" << endl;
+		else
+			cout << "Wasn't changed" << endl;
+
 	}
-	*/
+	
 }

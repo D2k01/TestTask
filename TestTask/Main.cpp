@@ -11,9 +11,25 @@ int main() {
 
 	setlocale(LC_ALL, "Russian");
 
+	crc32_table_gen();
+
+	ifstream data_r("Data.txt");
+
+	string buf;
+
+	if (data_r) {
+		while (getline(data_r, buf)) {
+
+			files.push_back(new File(buf));
+
+		}
+	}
+
+	data_r.close();
+
 	ifstream paths("Paths.txt");
 
-	crc32_table_gen();
+	
 	char path_ch[512];
 
 	while (paths.getline(path_ch, 512, '\n')) {
@@ -22,21 +38,20 @@ int main() {
 
 	}	
 
-	ofstream data("Data.txt");
+	paths.close();
 
-	for (File* f : files) {
+	ofstream data_w("Data.txt");
 
-		cout << f->path << endl << f->hash << endl;
-		f->write_data(data);
-
-		if (f->change)
-			cout << "Was changed" << endl;
-		else
-			cout << "Wasn't changed" << endl;
-
-		cout << endl;
-
+	for (File* f : files) {		
+		f->write_data(data_w);
 	}
+
+	data_w.close();
+
+	ofstream paths_clear("Paths.txt");
+	paths_clear.close();
+
+	print(files);
 
 	return 0;
 }

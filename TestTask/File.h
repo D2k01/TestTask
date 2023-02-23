@@ -18,15 +18,16 @@ public:
 	bool change;	
 	
 	File(char path_ch[]);
+	File(string& str);
 	~File();	
 
 //private:
 	void get_file_path(char path_ch[]);
 	void hash_f(unsigned char* buf, unsigned long len);
-	void get_file_inf();
+	void get_file_hash();
 	int get_file_size(ifstream& file);
 	void write_data(ofstream& file);
-
+	void read_data(string& str);
 };
 
 void crc32_table_gen();
@@ -34,5 +35,4 @@ void crc32_table_gen();
 string char_to_string(char ch[]);
 void utf8_to_rus(char path[]);
 void del_space(char path[], int i);
-bool file_eof(ifstream& paths);
-void print();
+void print(vector<File*>& files);
