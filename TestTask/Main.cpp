@@ -1,5 +1,6 @@
 #include "File.h"
 
+
 using namespace std;
 
 vector<File*> files;
@@ -9,38 +10,41 @@ int main() {
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
 
-	setlocale(LC_ALL, "Russian");
+	setlocale(LC_ALL, "Russian");	
 
-	crc32_table_gen();
+	ifstream data_r("Data.txt", ios::binary|ios::ate);	
 
-	ifstream data_r("Data.txt");
+	int end = data_r.tellg();
 
-	string buf;
+	data_r.seekg(0, ios::beg);
 
 	if (data_r) {
-		while (getline(data_r, buf)) {
+		
+		while(data_r.tellg() != end)
+			files.push_back(new File(data_r));
 
-			files.push_back(new File(buf));
-
-		}
 	}
+	else
+		cout << "File \"Data.txt\" wasn't opened" << endl;
 
 	data_r.close();
+	
+	
 
 	ifstream paths("Paths.txt");
 
 	
-	char path_ch[512];
+	char* path_ch = new char[128];	
 
-	while (paths.getline(path_ch, 512, '\n')) {
-
-		files.push_back(new File(path_ch));	
+	while (paths.getline(path_ch, 128, '\n')) {
+		
+		files.push_back(new File(path_ch));
 
 	}	
 
-	paths.close();
+	paths.close();	
 
-	ofstream data_w("Data.txt");
+	ofstream data_w("Data.txt", ios::binary);
 
 	for (File* f : files) {		
 		f->write_data(data_w);

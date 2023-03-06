@@ -1,39 +1,34 @@
 #include "File.h"
 
-unsigned long crc_table[256];
-
-void crc32_table_gen() {
-
-	unsigned long crc;
-
-	for (int i = 0; i < 256; i++) {
-		crc = i;
-		for (int j = 0; j < 8; j++) {
-			crc = crc & 1 ? (crc >> 1) ^ 0xEDB88320UL : crc >> 1;
-		}
-		crc_table[i] = crc;
-	}
-}
-
 File::File(char path_ch[]) {
 
-	get_file_path(path_ch);
+	CTX = new TGOSTHashContext;	
+	GOSTHashInit(CTX, 512);
+	set_file_path(path_ch);	
 	get_file_hash();
 
 };
 
-File::File(string& str) {
+File::File(ifstream& data_r) {
 
-	read_data(str);
+	CTX = new TGOSTHashContext;
+	GOSTHashInit(CTX, 512);
+	read_data(data_r);
 	get_file_hash();
 };
 
-File::~File() {};
+File::~File() {
 
-void File::get_file_path(char path_ch[]) {	
+	 delete[] path;
+
+};
+
+void File::set_file_path(char path_ch[]) {		
 	
+	//path = char_to_string(path_ch);
+	path = new char[128];
 	utf8_to_rus(path_ch);
-	path = char_to_string(path_ch);	
+	strcpy(path, path_ch);
 
 }
 
@@ -61,7 +56,7 @@ void utf8_to_rus(char path[]) {
 	}
 }
 
-string char_to_string(char ch[]) {
+string char_to_string(char* ch) {
 
 	string s;
 	std::stringstream ss;
@@ -80,55 +75,136 @@ void del_space(char path[], int i) {
 
 }
 
-void File::write_data(ofstream& file) {	
+void File::write_data(ofstream& data_w) {		
 
-	file << path << "|" << hash << "|" << "\n";
-	
+	int i;
+
+	lOp = char_to_string(path).size();
+
+	data_w.write((char*)&lOp, sizeof(int));
+	data_w.write((char*)&CTX->hash_size, sizeof(int));
+
+	for (i = 0; i < lOp; i++) // Ввести константу для длины path или записывать на основе максимально длины
+		data_w.write(&path[i], 1);
+
+	if (CTX->hash_size == 256) {
+		for (i = 32; i < 64; i++) {
+
+			data_w.write((char*)&CTX->hash[i], 1);
+
+		}
+	}
+	else {
+		for (i = 0; i < 64; i++) {
+
+			data_w.write((char*)&CTX->hash[i], 1);
+
+		}
+	}		
 }
 
-void File::read_data(string& str) {	
+void File::read_data(ifstream& data_r) {	
 	
-	int ptr;
-	
-	ptr = str.find('|');
-	path = str.substr(0, ptr);
-	str.erase(0, ptr + 1);
-	ptr = str.find('|');
-	hash = atoll(str.substr(0, ptr).c_str());
-	
+	int i;
+
+	data_r.read((char*)&lOp, sizeof(int));
+	data_r.read((char*)&CTX->hash_size, sizeof(int));
+
+	path = new char[lOp];	
+
+	path[lOp] = '\0';
+
+	for (i = 0; i < lOp; i++) // Ввести константу для длины path или записывать на основе максимально длины
+		data_r.read((char*)&path[i], 1);	
+
+	if (CTX->hash_size == 256) {
+		for (i = 32; i < 64; i++) {
+
+			data_r.read((char*)&hash_buf[i], 1);
+
+		}
+	}
+	else {
+		for (i = 0; i < 64; i++) {
+
+			data_r.read((char*)&hash_buf[i], 1);
+
+		}
+	}
+
 }
 
-int File::get_file_size(ifstream& file) {
-
-	file.seekg(0, ios::end);
+int File::get_file_size(ifstream& file) {	
 
 	return file.tellg();
-
-	file.clear();
-	file.seekg(0);
+	
 }
 
 void File::get_file_hash() {
 
-	ifstream file(path, ios::binary);
+	ifstream file(path, ios::binary|ios::ate);	
 
-	int n = get_file_size(file);
+	int n = file.tellg();	
+
+	file.seekg(0, ios::beg);	
+
+	uint8_t* buf = new uint8_t[2*n];
+
+	buf[n] = '\0';
 
 	if (file) {
+		
+		file.read((char*)buf, n);
+		
+		GOSTHashUpdate(CTX, buf, n);
 
-		char* buf = new char[n];
+		if(buf != NULL)
+			delete[] buf;
 
-		file.read(buf, n);
+		GOSTHashFinal(CTX);
 
-		hash_f((unsigned char*)buf, n);
+		file.close();
+
+		if (hash_buf != NULL)
+			was_changed();		
+
 	}
 	else
 		cerr << "File didn't open" << endl;
-
-	file.close();
-
 }
 
+void File::was_changed() {
+
+	int i;
+	change = false;
+
+	if (CTX->hash_size == 256) {
+		for (i = 32; i < 64; i++) {
+
+			if (hash_buf[i] != CTX->hash[i]) {
+
+				change = true;
+				break;
+
+			}
+
+		}		
+	}
+	else {
+		for (i = 0; i < 64; i++) {
+
+			if (hash_buf[i] != CTX->hash[i]) {
+
+				change = true;
+				break;
+
+			}
+
+		}
+	}
+}
+
+/*
 void File::hash_f(unsigned char* buf, unsigned long len) {
 	unsigned long crc = 0xFFFFFFFFUL;
 	unsigned long tmp = 0;
@@ -149,20 +225,37 @@ void File::hash_f(unsigned char* buf, unsigned long len) {
 	
 	hash = tmp;
 	
-}
+}*/
 
 void print(vector<File*>& files) {
 
+	string path_str;
 	int ptr_begin;
 	int ptr_end;
+	int i;
+
+	
 
 	for (File* f : files) {
+		
+		path_str = char_to_string(f->path);
 
-		ptr_begin = f->path.find("\\");
-		ptr_end = f->path.rfind("\\");
+		ptr_begin = path_str.find("\\");
+		ptr_end = path_str.rfind("\\");
 
-		cout << f->path.substr(0, ptr_begin + 1) << "....." << f->path.substr(ptr_end, f->path.size())
-			<< " | " << f->hash << " | ";
+		cout << path_str.substr(0, ptr_begin + 1) << "....." << path_str.substr(ptr_end, path_str.size())
+			<< " | " ;
+
+		if (f->CTX->hash_size == 256) {
+			for (i = 32; i < 64; i++)				
+				printf("%x", f->CTX->hash[i]);
+		}
+		else
+			for (i = 0; i < 64; i++)				
+				printf("%x", f->CTX->hash[i]);
+				
+
+		cout << "|";
 
 		if (f->change)
 			cout << "Was changed" << endl;
