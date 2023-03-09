@@ -122,7 +122,7 @@ static unsigned char C[12][64] = {
 };
 
 static void GOSTHashX(const uint8_t* a, const uint8_t* b, uint8_t* c); // Операция сложения по модулю 2
-static void GOSTHashAdd512(const uint8_t* a, const uint8_t* b, uint8_t* c); // Операция сложения в кольце(Побитовое ИЛИ);
+static void GOSTHashAdd512(const uint8_t* a, const uint8_t* b, uint8_t* c); // Операция сложения в кольце(Побитовое ИЛИ)
 static void GOSTHashS(uint8_t* state);
 static void GOSTHashP(uint8_t* state);
 static void GOSTHashL(uint8_t* state);
@@ -134,7 +134,7 @@ typedef struct GOSTHashContext
 	vect h; // Промежуточный результат вычислений
 	vect N; //
 	vect Sigma; //Контрольная сумма
-		vect v_0; // Инициализационный вектор
+	vect v_0; // Инициализационный вектор
 	vect v_512; // Инициализационный вектор
 	size_t buf_size; // Размер оставшейся части сообщения
 					 // (которая оказалась меньше очередных 64 байт)
